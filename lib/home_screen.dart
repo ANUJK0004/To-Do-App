@@ -12,7 +12,7 @@ class HomeScreen extends StatefulWidget {
 class Task {
   final String title;
   final String description;
-  final bool isCompleted;
+  late bool isCompleted;
 
   Task({required this.title, required this.description, required this.isCompleted});
 }
@@ -21,9 +21,7 @@ class _HomeScreenState extends State<HomeScreen> {
   late final TextEditingController _taskTitle = TextEditingController();
   late final TextEditingController _taskDescription = TextEditingController();
   static const addMessage = SnackBar(content: Text("Task added ✅"));
-  late Color markIcon;
   List<Task> tasks = [];
-
   @override
   void initState() {
     super.initState();
@@ -73,16 +71,11 @@ class _HomeScreenState extends State<HomeScreen> {
                   leading: IconButton(
                     onPressed: () {
                       setState(() {
-                        if (tasks[index].isCompleted) {
-                          markIcon = Colors.blue;
-                        }
-                        else {
-                          markIcon = Colors.black26;
-                        }
+                        tasks[index].isCompleted = !tasks[index].isCompleted ;
                       });
                     },
                     icon: Icon(Icons.task_alt, size: 30),
-                    color: markIcon,
+                    color:tasks[index].isCompleted ? Colors.blue : Colors.black26,
                   ),
                   trailing: IconButton(
                     onPressed: () {
