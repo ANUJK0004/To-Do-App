@@ -1,6 +1,8 @@
+import 'dart:convert';
 import 'dart:core';
 
 import 'package:flutter/material.dart';
+import 'package:shared_preferences/shared_preferences.dart';
 
 class HomeScreen extends StatefulWidget {
   const HomeScreen({super.key});
@@ -12,9 +14,29 @@ class HomeScreen extends StatefulWidget {
 class Task {
   final String title;
   final String description;
-  late bool isCompleted;
+  bool isCompleted;
 
-  Task({required this.title, required this.description, required this.isCompleted});
+  Task({
+    required this.title,
+    required this.description,
+    required this.isCompleted,
+  });
+
+  Map<String, dynamic> toJson() {
+    return {
+      'title': title,
+      'description': description,
+      'isCompleted': isCompleted,
+    };
+  }
+
+  factory Task.fromJson(Map<String, dynamic> json) {
+    return Task(
+      title: json['title'],
+      description: json['description'],
+      isCompleted: json['isCompleted'],
+    );
+  }
 }
 
 class _HomeScreenState extends State<HomeScreen> {
@@ -25,14 +47,41 @@ class _HomeScreenState extends State<HomeScreen> {
   @override
   void initState() {
     super.initState();
+    _loadTasks();
+  }
+
+
+  Future<void> _loadTasks() async {
+    final prefs = await SharedPreferences.getInstance();
+    final List<String>? taskList = prefs.getStringList('tasks');
+
+    if(!mounted) return;
+
+    setState(() {
+      if (taskList != null) {
+        tasks = taskList.map((item) => Task.fromJson(jsonDecode(item))).toList();
+      }
+      else{
+        tasks =[];
+      }
+    });
+  }
+
+  Future<void> _saveTasks() async {
+    final prefs = await SharedPreferences.getInstance();
+    final List<String> tasksList = tasks
+        .map((task) => jsonEncode(task.toJson()))
+        .toList();
+    await prefs.setStringList('tasks', tasksList);
   }
 
   @override
   void dispose() {
+    _taskTitle.dispose();
+    _taskDescription.dispose();
     super.dispose();
-    _taskTitle.clear();
-    _taskDescription.clear();
   }
+
   @override
   Widget build(BuildContext context) {
     return Scaffold(
@@ -71,17 +120,21 @@ class _HomeScreenState extends State<HomeScreen> {
                   leading: IconButton(
                     onPressed: () {
                       setState(() {
-                        tasks[index].isCompleted = !tasks[index].isCompleted ;
+                        tasks[index].isCompleted = !tasks[index].isCompleted;
                       });
+                      _saveTasks();
                     },
                     icon: Icon(Icons.task_alt, size: 30),
-                    color:tasks[index].isCompleted ? Colors.blue : Colors.black26,
+                    color: tasks[index].isCompleted
+                        ? Colors.blue
+                        : Colors.black26,
                   ),
                   trailing: IconButton(
                     onPressed: () {
                       setState(() {
                         tasks.removeAt(index);
                       });
+                      _saveTasks();
                     },
                     icon: Icon(Icons.delete, size: 30),
                     color: Colors.red,
@@ -94,73 +147,76 @@ class _HomeScreenState extends State<HomeScreen> {
           context: context,
           builder: (BuildContext context) => AlertDialog(
             title: const Text("Task dialog box"),
-            content: const Text("Enter task and its description."),
-            actions: <Widget>[
-              Column(
+            content: Column(
+              mainAxisSize: MainAxisSize.min,
+              children: [
+                TextField(
+                  controller: _taskTitle,
+                  decoration: InputDecoration(
+                    labelText: "Task name",
+                    hint: Text("Enter the task name here"),
+                    border: OutlineInputBorder(),
+                  ),
+                ),
+                SizedBox(height: 20),
+                TextField(
+                  controller: _taskDescription,
+                  decoration: InputDecoration(
+                    labelText: "Task description",
+                    hint: Text("Enter the task description here"),
+                    border: OutlineInputBorder(),
+                  ),
+                ),
+              ],
+            ),
+            actions: [
+              Row(mainAxisAlignment: MainAxisAlignment.spaceEvenly,
                 children: [
-                  TextField(
-                    controller: _taskTitle,
-                    decoration: InputDecoration(
-                      labelText: "Task name",
-                      hint: Text("Enter the task name here"),
-                      border: OutlineInputBorder(),
+                  TextButton(
+                    onPressed: () {
+                      _taskTitle.clear();
+                      _taskDescription.clear();
+                      Navigator.pop(context);
+                    },
+                      child: Text(
+                      "Back",
+                      style: TextStyle(color: Colors.red.shade700),
                     ),
                   ),
-                  SizedBox(height: 20),
-                  TextField(
-                    controller: _taskDescription,
-                    decoration: InputDecoration(
-                      labelText: "Task description",
-                      hint: Text("Enter the task description here"),
-                      border: OutlineInputBorder(),
-                    ),
-                  ),
-                  Padding(
-                    padding: const EdgeInsets.only(top: 8.0),
-                    child: Row(
-                      mainAxisAlignment: MainAxisAlignment.spaceEvenly,
-                      children: [
-                        TextButton(
-                          onPressed: () => Navigator.pop(context),
-                          child: Text(
-                            "Back",
-                            style: TextStyle(color: Colors.red.shade700),
-                          ),
-                        ),
-                        ElevatedButton(
-                          onPressed: () {
-                            setState(() {
-                              Task task = Task(
-                                title: _taskTitle.text,
-                                description: _taskDescription.text,
-                                isCompleted: false,
-                              );
-                              if (_taskTitle.text.isNotEmpty &&
-                                  _taskDescription.text.isNotEmpty) {
-                                tasks.add(task);
-                                Navigator.pop(context);
-                                ScaffoldMessenger.of(
-                                  context,
-                                ).showSnackBar(addMessage);
-                              } else {
-                                ScaffoldMessenger.of(context).showSnackBar(
-                                  SnackBar(
-                                    backgroundColor: Colors.green.shade200,
-                                    content: Text(
-                                      "Enter task details.",
-                                      style: TextStyle(
-                                        color: Colors.red.shade400,
-                                      ),
-                                    ),
-                                  ),
-                                );
-                              }
-                            });
-                          },
-                          child: Text("Add"),
-                        ),
-                      ],
-                    ),
+                  ElevatedButton(
+                    onPressed: () {
+                      setState(() {
+                        if (_taskTitle.text.isNotEmpty &&
+                            _taskDescription.text.isNotEmpty) {
+                          Task task = Task(
+                            title: _taskTitle.text,
+                            description: _taskDescription.text,
+                            isCompleted: false,
+                          );
+                          tasks.add(task);
+                          _saveTasks();
+                          _taskTitle.clear();
+                          _taskDescription.clear();
+                          Navigator.pop(context);
+                          ScaffoldMessenger.of(
+                            context,
+                          ).showSnackBar(addMessage);
+                        } else {
+                          ScaffoldMessenger.of(context).showSnackBar(
+                            SnackBar(
+                              backgroundColor: Colors.green.shade200,
+                              content: Text(
+                                "Enter task details.",
+                                style: TextStyle(
+                                  color: Colors.red.shade400,
+                                ),
+                              ),
+                            ),
+                          );
+                        }
+                      });
+                    },
+                    child: Text("Add"),
                   ),
                 ],
               ),
