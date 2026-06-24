@@ -1,3 +1,5 @@
+import 'dart:core';
+
 import 'package:flutter/material.dart';
 
 class HomeScreen extends StatefulWidget {
@@ -7,10 +9,32 @@ class HomeScreen extends StatefulWidget {
   State<HomeScreen> createState() => _HomeScreenState();
 }
 
-class _HomeScreenState extends State<HomeScreen> {
-  var task = "Task 1";
-  var taskDescription = "To complete task 1 before day 1.";
+class Task {
+  final String title;
+  final String description;
+  final bool isCompleted;
 
+  Task({required this.title, required this.description, required this.isCompleted});
+}
+
+class _HomeScreenState extends State<HomeScreen> {
+  late final TextEditingController _taskTitle = TextEditingController();
+  late final TextEditingController _taskDescription = TextEditingController();
+  static const addMessage = SnackBar(content: Text("Task added ✅"));
+  late Color markIcon;
+  List<Task> tasks = [];
+
+  @override
+  void initState() {
+    super.initState();
+  }
+
+  @override
+  void dispose() {
+    super.dispose();
+    _taskTitle.clear();
+    _taskDescription.clear();
+  }
   @override
   Widget build(BuildContext context) {
     return Scaffold(
@@ -26,35 +50,52 @@ class _HomeScreenState extends State<HomeScreen> {
         centerTitle: true,
         backgroundColor: Colors.green,
       ),
-      body: ListView(
-        padding: EdgeInsets.only(top: 10),
-        children: [
-          ListTile(
-            minTileHeight: 52,
-            title: Text(
-              task,
-              style: TextStyle(
-                color: Colors.green.shade900,
-                fontWeight: FontWeight.bold,
-              ),
+      body: tasks.isEmpty
+          ? Center(child: Text("Add tasks", style: TextStyle(fontSize: 32)))
+          : ListView.builder(
+              itemCount: tasks.length,
+              itemBuilder: (context, index) {
+                return ListTile(
+                  onLongPress: () {},
+                  minTileHeight: 100,
+                  title: Text(
+                    tasks[index].title,
+                    style: TextStyle(
+                      color: Colors.green.shade900,
+                      fontWeight: FontWeight.bold,
+                      fontSize: 24,
+                    ),
+                  ),
+                  subtitle: Text(
+                    tasks[index].description,
+                    style: TextStyle(color: Colors.black, fontSize: 18),
+                  ),
+                  leading: IconButton(
+                    onPressed: () {
+                      setState(() {
+                        if (tasks[index].isCompleted) {
+                          markIcon = Colors.blue;
+                        }
+                        else {
+                          markIcon = Colors.black26;
+                        }
+                      });
+                    },
+                    icon: Icon(Icons.task_alt, size: 30),
+                    color: markIcon,
+                  ),
+                  trailing: IconButton(
+                    onPressed: () {
+                      setState(() {
+                        tasks.removeAt(index);
+                      });
+                    },
+                    icon: Icon(Icons.delete, size: 30),
+                    color: Colors.red,
+                  ),
+                );
+              },
             ),
-            subtitle: Text(
-              taskDescription,
-              style: TextStyle(color: Colors.black45),
-            ),
-            leading: IconButton(
-              onPressed: () {},
-              icon: Icon(Icons.task_alt, size: 30),
-              color: Colors.blue,
-            ),
-            trailing: IconButton(
-              onPressed: () {},
-              icon: Icon(Icons.delete, size: 30),
-              color: Colors.red,
-            ),
-          ),
-        ],
-      ),
       floatingActionButton: FloatingActionButton(
         onPressed: () => showDialog(
           context: context,
@@ -65,30 +106,68 @@ class _HomeScreenState extends State<HomeScreen> {
               Column(
                 children: [
                   TextField(
+                    controller: _taskTitle,
                     decoration: InputDecoration(
                       labelText: "Task name",
                       hint: Text("Enter the task name here"),
                       border: OutlineInputBorder(),
                     ),
                   ),
+                  SizedBox(height: 20),
                   TextField(
+                    controller: _taskDescription,
                     decoration: InputDecoration(
                       labelText: "Task description",
                       hint: Text("Enter the task description here"),
                       border: OutlineInputBorder(),
                     ),
                   ),
-                  Row(
-                    children: [
-                      TextButton(
-                        onPressed: () => Navigator.pop(context),
-                        child: Text(
-                          "Back",
-                          style: TextStyle(color: Colors.red.shade700),
+                  Padding(
+                    padding: const EdgeInsets.only(top: 8.0),
+                    child: Row(
+                      mainAxisAlignment: MainAxisAlignment.spaceEvenly,
+                      children: [
+                        TextButton(
+                          onPressed: () => Navigator.pop(context),
+                          child: Text(
+                            "Back",
+                            style: TextStyle(color: Colors.red.shade700),
+                          ),
                         ),
-                      ),
-                      ElevatedButton(onPressed: () {}, child: Text("Add")),
-                    ],
+                        ElevatedButton(
+                          onPressed: () {
+                            setState(() {
+                              Task task = Task(
+                                title: _taskTitle.text,
+                                description: _taskDescription.text,
+                                isCompleted: false,
+                              );
+                              if (_taskTitle.text.isNotEmpty &&
+                                  _taskDescription.text.isNotEmpty) {
+                                tasks.add(task);
+                                Navigator.pop(context);
+                                ScaffoldMessenger.of(
+                                  context,
+                                ).showSnackBar(addMessage);
+                              } else {
+                                ScaffoldMessenger.of(context).showSnackBar(
+                                  SnackBar(
+                                    backgroundColor: Colors.green.shade200,
+                                    content: Text(
+                                      "Enter task details.",
+                                      style: TextStyle(
+                                        color: Colors.red.shade400,
+                                      ),
+                                    ),
+                                  ),
+                                );
+                              }
+                            });
+                          },
+                          child: Text("Add"),
+                        ),
+                      ],
+                    ),
                   ),
                 ],
               ),
