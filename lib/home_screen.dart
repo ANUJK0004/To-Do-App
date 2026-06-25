@@ -103,7 +103,12 @@ class _HomeScreenState extends State<HomeScreen> {
               itemCount: tasks.length,
               itemBuilder: (context, index) {
                 return ListTile(
-                  onLongPress: () {},
+                  onLongPress: () {
+                    showDialog(context: context, builder: (BuildContext context) => AlertDialog(
+                      title: Text(tasks[index].title,style: TextStyle(color: Colors.green.shade900,fontWeight: FontWeight.bold)),
+                      content: Text(tasks[index].description,style: TextStyle(fontSize: 20),),
+                    ));
+                  },
                   minTileHeight: 100,
                   title: Text(
                     tasks[index].title,
